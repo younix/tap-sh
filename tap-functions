@@ -83,8 +83,8 @@ USAGE
 
 opt=
 set_u=
-while getopts ":sx" opt ; do
-	case $_opt in
+while getopts "u" opt ; do
+	case $opt in
 	u) set_u=1 ;;
 	*) usage ;;
 	esac
