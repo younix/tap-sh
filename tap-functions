@@ -1,5 +1,8 @@
 #!/bin/bash 
 
+# Copyright 2008 Patrick LeBoutillier <patl@cpan.org>
+# Licence: GPLv2
+# http://svn.solucorp.qc.ca/repos/solucorp/JTap/trunk/
 
 _version='1.03'
 	
