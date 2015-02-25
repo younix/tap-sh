@@ -12,8 +12,8 @@ _plan_set=0
 _no_plan=0
 _skip_all=0
 _test_died=0
-_expected_tests=0 
-_executed_tests=0 
+_expected_tests=0
+_executed_tests=0
 _failed_tests=0
 TODO=
 
@@ -229,14 +229,13 @@ okx() {
 	ok ${PIPESTATUS[0]} "$command"
 }
 
-
 _equals() {
 	local result=${1:?}
 	local expected=${2:?}
 
 	if [[ "$result" == "$expected" ]] ; then
 		return 0
-	else 
+	else
 		return 1
 	fi
 }
@@ -256,7 +255,7 @@ _is_diag() {
 	local result=${1:?}
 	local expected=${2:?}
 
-	diag "         got: '$result'" 
+	diag "         got: '$result'"
 	diag "    expected: '$expected'"
 }
 
@@ -270,7 +269,7 @@ is() {
 	ok $? "$name"
 	local r=$?
 	(( r != 0 )) && _is_diag "$result" "$expected"
-	return $r 
+	return $r
 }
 
 isnt() {
@@ -283,7 +282,7 @@ isnt() {
 	ok $? "$name"
 	local r=$?
 	(( r != 0 )) && _is_diag "$result" "$expected"
-	return $r 
+	return $r
 }
 
 like() {
@@ -321,7 +320,7 @@ skip() {
 		local i=
 		for i in `jot $n 0`; do
 			_executed_tests=$(( _executed_tests + 1 ))
-			echo "ok $_executed_tests # skip: $reason" 
+			echo "ok $_executed_tests # skip: $reason"
 		done
 		return 0
 	else
