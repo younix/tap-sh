@@ -78,7 +78,7 @@ EXAMPLE:
   okx [ "$HOME" == "/root" ]
   unset TODO
 USAGE
-	exit
+	exit 1
 }
 
 opt=
