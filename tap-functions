@@ -1,3 +1,4 @@
+#!/bin/sh
 #!/usr/bin/env ksh
 
 # Copyright 2008 Patrick LeBoutillier <patl@cpan.org>
@@ -6,7 +7,7 @@
 # Licence: GPLv2
 # http://svn.solucorp.qc.ca/repos/solucorp/JTap/trunk/
 
-_version='1.03'
+_version='2.00'
 
 _plan_set=0
 _no_plan=0
@@ -125,8 +126,8 @@ plan_skip_all() {
 plan_tests() {
 	local tests=${1:?}
 
-	(( _plan_set != 0 )) && _die "You tried to plan twice!"
-	(( tests == 0 )) && _die "You said to run 0 tests!  You've got to run something."
+	test $_plan_set -ne 0 && _die "You tried to plan twice!"
+	test $tests -eq 0 && _die "You said to run 0 tests!  You've got to run something."
 
 	_print_plan $tests
 	_expected_tests=$tests
@@ -160,7 +161,7 @@ ok() {
 	local result=${1:?}
 	local name=${2:-''}
 
-	(( _plan_set == 0 )) && _die "You tried to run a test without a plan!  Gotta have a plan."
+	test $_plan_set -eq 0 && _die "You tried to run a test without a plan!  Gotta have a plan."
 
 	_executed_tests=$(( $_executed_tests + 1 ))
 
@@ -171,26 +172,26 @@ ok() {
 		fi
 	fi
 
-	if (( result != 0 )) ; then
+	if [ $result -ne 0 ] ; then
 		echo -n "not "
 		_failed_tests=$(( _failed_tests + 1 ))
 	fi
 	echo -n "ok $_executed_tests"
 
 	if [[ -n "$name" ]] ; then
-		local ename=${name//\#/\\#}
+		local ename=$(echo "${name}" | sed -e 's/#/\\#/g')
 		echo -n " - $ename"
 	fi
 
 	if [[ -n "$TODO" ]] ; then
 		echo -n " # TODO $TODO" ;
-		if (( result != 0 )) ; then
+		if [ $result -ne 0 ] ; then
 			_failed_tests=$(( _failed_tests - 1 ))
 		fi
 	fi
 
 	echo
-	if (( result != 0 )) ; then
+	if [ result -ne 0 ] ; then
 		local file='tap-functions'
 		local func=
 		local line=
@@ -222,11 +223,14 @@ okx() {
 	local command="$@"
 
 	local line=
+	local command_status=
 	diag "Output of '$command':"
-	$command | while read line ; do
-		diag "$line"
-	done
-	ok ${PIPESTATUS[0]} "$command"
+	#exec 3>&1;	# open by-pass on fd 3
+	local ec=$({ $command; echo $?>3; } | while read line ; do
+		diag "$line";
+	done; 3>&1)
+	#ok ${PIPESTATUS[0]} "$command"
+	ok $ec "$command"
 }
 
 _equals() {
@@ -265,10 +269,10 @@ is() {
 	local name=${3:-''}
 
 	_equals "$result" "$expected"
-	(( $? == 0 ))
+	test $? -eq 0
 	ok $? "$name"
 	local r=$?
-	(( r != 0 )) && _is_diag "$result" "$expected"
+	test $r -ne 0 && _is_diag "$result" "$expected"
 	return $r
 }
 
@@ -278,10 +282,10 @@ isnt() {
 	local name=${3:-''}
 
 	_equals "$result" "$expected"
-	(( $? != 0 ))
+	test $? -ne 0
 	ok $? "$name"
 	local r=$?
-	(( r != 0 )) && _is_diag "$result" "$expected"
+	test $r -ne 0 && _is_diag "$result" "$expected"
 	return $r
 }
 
@@ -291,10 +295,10 @@ like() {
 	local name=${3:-''}
 
 	_matches "$result" "$pattern"
-	(( $? == 0 ))
+	test $? -eq 0
 	ok $? "$name"
 	local r=$?
-	(( r != 0 )) && diag "    '$result' doesn't match '$pattern'"
+	test $r -ne 0 && diag "    '$result' doesn't match '$pattern'"
 	return $r
 }
 
@@ -304,10 +308,10 @@ unlike() {
 	local name=${3:-''}
 
 	_matches "$result" "$pattern"
-	(( $? != 0 ))
+	test $? -ne 0
 	ok $? "$name"
 	local r=$?
-	(( r != 0 )) && diag "    '$result' matches '$pattern'"
+	test $r -ne 0 && diag "    '$result' matches '$pattern'"
 	return $r
 }
 
@@ -316,7 +320,7 @@ skip() {
 	local reason=${2:-''}
 	local n=${3:-1}
 
-	if (( condition == 0 )) ; then
+	if [ $condition -eq 0 ] ; then
 		local i=
 		for i in `jot $n 0`; do
 			_executed_tests=$(( _executed_tests + 1 ))
@@ -356,35 +360,35 @@ BAIL_OUT() {
 _cleanup() {
 	local rc=0
 
-	if (( _plan_set == 0 )) ; then
+	if [ $_plan_set -eq 0 ] ; then
 		diag "Looks like your test died before it could output anything."
 		return $rc
 	fi
 
-	if (( _test_died != 0 )) ; then
+	if $_test_died -ne 0 ] ; then
 		diag "Looks like your test died just after $_executed_tests."
 		return $rc
 	fi
 
-	if (( _skip_all == 0 && _no_plan != 0 )) ; then
+	if [ $_skip_all -eq 0 -a $_no_plan -ne 0 ] ; then
 		_print_plan $_executed_tests
 	fi
 
 	local s=
-	if (( _no_plan == 0 && _expected_tests < _executed_tests )) ; then
-		s= ; (( _expected_tests > 1 )) && s=s
+	if [ $_no_plan -eq 0 -a $_expected_tests -lt $_executed_tests ] ; then
+		s= ; test $_expected_tests -gt 1 && s=s
 		local extra=$(( _executed_tests - _expected_tests ))
 		diag "Looks like you planned $_expected_tests test$s but ran $extra extra."
 		rc=-1 ;
 	fi
 
-	if (( _no_plan == 0 && _expected_tests > _executed_tests )) ; then
-		s= ; (( _expected_tests > 1 )) && s=s
+	if [ $_no_plan -eq 0 -a $_expected_tests -gt $_executed_tests ] ; then
+		s= ; test _expected_tests -gt 1 && s=s
 		diag "Looks like you planned $_expected_tests test$s but only ran $_executed_tests."
 	fi
 
-	if (( _failed_tests > 0 )) ; then
-		s= ; (( _failed_tests > 1 )) && s=s
+	if [ $_failed_tests -gt 0 ] ; then
+		s= ; test $_failed_tests -gt > 1 && s=s
 		diag "Looks like you failed $_failed_tests test$s of $_executed_tests."
 	fi
 
@@ -392,11 +396,11 @@ _cleanup() {
 }
 
 _exit_status() {
-	if (( _no_plan != 0 || _plan_set == 0 )) ; then
+	if [ $_no_plan -ne 0 -o $_plan_set -eq 0 ] ; then
 		return $_failed_tests
 	fi
 
-	if (( _expected_tests < _executed_tests )) ; then
+	if [ $_expected_tests -lt $_executed_tests ] ; then
 		return $(( _executed_tests - _expected_tests  ))
 	fi
 
@@ -412,7 +416,7 @@ _exit() {
 
 	_cleanup
 	local alt_rc=$?
-	(( alt_rc != 0 )) && rc=$alt_rc
+	test $alt_rc -ne 0 && rc=$alt_rc
 	trap - EXIT
 	exit $rc
 }
